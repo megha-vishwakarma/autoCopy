@@ -1,0 +1,62 @@
+Option Explicit
+
+Sub Copy_Client_Files()
+
+    Dim ws As Worksheet
+    Dim lastRow As Long
+    Dim i As Long
+    
+    Dim clientName As String
+    Dim filePrefix As String
+    Dim sourcePath As String
+    Dim destPath As String
+    
+    Dim fileName As String
+    Dim fullSourceFile As String
+    Dim fullDestFile As String
+    Dim todayDate As String
+    
+    Set ws = ThisWorkbook.Sheets("Directory")
+    
+    lastRow = ws.Cells(ws.Rows.Count, "A").End(xlUp).Row
+    
+    todayDate = Format(Date, "yyyymmdd")
+    
+    Application.ScreenUpdating = False
+    Application.DisplayAlerts = False
+    
+    For i = 2 To lastRow
+        
+        ' Skip blank rows
+        If Trim(ws.Cells(i, 2).Value) <> "" Then
+            
+            filePrefix = Trim(ws.Cells(i, 2).Value)
+            sourcePath = Trim(ws.Cells(i, 3).Value)
+            destPath = Trim(ws.Cells(i, 4).Value)
+            
+            ' Make sure paths end with "\"
+            If Right(sourcePath, 1) <> "\" Then sourcePath = sourcePath & "\"
+            If Right(destPath, 1) <> "\" Then destPath = destPath & "\"
+            
+            ' Find file that starts with prefix
+            fileName = Dir(sourcePath & filePrefix & "*.xls*")
+            
+            If fileName <> "" Then
+                
+                fullSourceFile = sourcePath & fileName
+                fullDestFile = destPath & filePrefix & "_" & todayDate & ".xlsx"
+                
+                FileCopy fullSourceFile, fullDestFile
+                
+            End If
+            
+        End If
+        
+    Next i
+    
+    Application.ScreenUpdating = True
+    Application.DisplayAlerts = True
+    
+    MsgBox "All files copied and renamed successfully!", vbInformation
+
+End Sub
