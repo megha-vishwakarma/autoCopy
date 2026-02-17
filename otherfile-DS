@@ -1,0 +1,80 @@
+Option Explicit
+
+Sub AutoCopyFiles()
+    Dim ws As Worksheet
+    Dim lastRow As Long, i As Long
+    Dim sourceFolder As String, destFolder As String
+    Dim filePrefix As String
+    Dim fileName As String, baseName As String, fileExt As String
+    Dim newFileName As String
+    Dim dateStr As String
+    Dim fso As Object
+    
+    ' Set the worksheet containing the data (change name if necessary)
+    Set ws = ThisWorkbook.Sheets("Directory")
+    
+    ' Get today's date in YYYYMMDD format
+    dateStr = Format(Date, "yyyymmdd")
+    
+    ' Find last row with data in column A (assuming data starts at row 2)
+    lastRow = ws.Cells(ws.Rows.Count, "A").End(xlUp).Row
+    
+    ' Create FileSystemObject for folder checks
+    Set fso = CreateObject("Scripting.FileSystemObject")
+    
+    ' Loop through each row
+    For i = 2 To lastRow
+        filePrefix = Trim(ws.Cells(i, "B").Value)
+        
+        ' Check if file name starts with "SRP" (case-insensitive)
+        If UCase(Left(filePrefix, 3)) = "SRP" Then
+            sourceFolder = Trim(ws.Cells(i, "C").Value)
+            destFolder = Trim(ws.Cells(i, "D").Value)
+            
+            ' Validate folders exist
+            If Not fso.FolderExists(sourceFolder) Then
+                MsgBox "Source folder not found: " & sourceFolder, vbExclamation, "Error"
+                GoTo NextRow
+            End If
+            If Not fso.FolderExists(destFolder) Then
+                ' Optionally create destination folder
+                On Error Resume Next
+                fso.CreateFolder destFolder
+                On Error GoTo 0
+                If Not fso.FolderExists(destFolder) Then
+                    MsgBox "Cannot create destination folder: " & destFolder, vbExclamation, "Error"
+                    GoTo NextRow
+                End If
+            End If
+            
+            ' Find a file in source folder starting with the prefix
+            fileName = Dir(sourceFolder & "\" & filePrefix & "*")
+            If fileName = "" Then
+                MsgBox "No file starting with '" & filePrefix & "' found in " & sourceFolder, vbExclamation, "Warning"
+                GoTo NextRow
+            End If
+            
+            ' Separate base name and extension
+            baseName = fso.GetBaseName(fileName)
+            fileExt = fso.GetExtensionName(fileName)
+            If fileExt <> "" Then fileExt = "." & fileExt
+            
+            ' New filename: original base + date + extension
+            newFileName = baseName & "_" & dateStr & fileExt
+            
+            ' Copy file
+            On Error Resume Next
+            FileCopy sourceFolder & "\" & fileName, destFolder & "\" & newFileName
+            If Err.Number <> 0 Then
+                MsgBox "Error copying file: " & Err.Description, vbCritical, "Error"
+                Err.Clear
+            Else
+                MsgBox "Copied: " & fileName & " -> " & destFolder & "\" & newFileName, vbInformation, "Success"
+            End If
+            On Error GoTo 0
+        End If
+NextRow:
+    Next i
+    
+    MsgBox "Process completed.", vbInformation, "Done"
+End Sub
